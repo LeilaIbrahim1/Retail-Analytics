@@ -1,0 +1,68 @@
+resources:
+  jobs:
+    Retail_Medallion_Pipeline:
+      name: " Retail_Medallion_Pipeline"
+      email_notifications:
+        on_success:
+          - leilaebraheem@gmail.com
+        on_failure:
+          - leilaebraheem@gmail.com
+      schedule:
+        quartz_cron_expression: 43 0 12 * * ?
+        timezone_id: Africa/Cairo
+        pause_status: UNPAUSED
+      tasks:
+        - task_key: Bronze_Ingestion
+          notebook_task:
+            notebook_path: Notebooks/01_bronze_ingestion
+            base_parameters:
+              use_unity_catalog: "true"
+              catalog_name: workspace
+              schema_prefix: retail
+              landing_path: /Volumes/workspace/default/retail_landing
+            source: GIT
+        - task_key: Silver_Transformation
+          depends_on:
+            - task_key: Bronze_Ingestion
+          notebook_task:
+            notebook_path: Notebooks/02_silver_transformation
+            base_parameters:
+              use_unity_catalog: "true"
+              catalog_name: workspace
+              schema_prefix: retail
+            source: GIT
+        - task_key: Gold_Modeling
+          depends_on:
+            - task_key: Silver_Transformation
+          notebook_task:
+            notebook_path: Notebooks/03_gold_modeling
+            base_parameters:
+              catalog_name: workspace
+              schema_prefix: retail
+            source: GIT
+        - task_key: Data_Quality_Validation
+          depends_on:
+            - task_key: Gold_Modeling
+          notebook_task:
+            notebook_path: Notebooks/04_data_quality_checks
+            base_parameters:
+              catalog_name: workspace
+              schema_prefix: retail
+              fail_on_critical: "true"
+            source: GIT
+        - task_key: Delta_Optimizations
+          depends_on:
+            - task_key: Data_Quality_Validation
+          notebook_task:
+            notebook_path: Notebooks/05_delta_optimizations
+            base_parameters:
+              catalog_name: workspace
+              schema_prefix: retail
+            source: GIT
+      git_source:
+        git_url: https://github.com/LeilaIbrahim1/Retail-Analytics.git
+        git_provider: gitHub
+        git_branch: main
+      queue:
+        enabled: true
+      performance_target: PERFORMANCE_OPTIMIZED
